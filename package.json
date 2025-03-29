@@ -1,0 +1,20 @@
+{
+  "name": "discord-llm-bot",
+  "version": "1.0.0",
+  "description": "Discord bot with OpenRouter LLM integration and data collection",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "openai": "^4.28.0",
+    "winston": "^3.11.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+} 
