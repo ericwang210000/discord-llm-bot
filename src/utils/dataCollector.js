@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const winston = require('winston');
+const crypto = require('crypto');
 
 // Configure logger
 const logger = winston.createLogger({
@@ -17,6 +18,7 @@ class DataCollector {
   constructor(storagePath) {
     this.storagePath = storagePath;
     this.userMap = new Map(); // Maps Discord user IDs to anonymous IDs
+    this.channelMap = new Map(); // Maps Discord channel IDs to anonymous IDs
   }
 
   async initialize() {
@@ -34,17 +36,28 @@ class DataCollector {
     return this.userMap.get(userId);
   }
 
+  getAnonymousChannelId(channelId) {
+    if (!this.channelMap.has(channelId)) {
+      // Create a hash of the channel ID using SHA-256
+      const hash = crypto.createHash('sha256').update(channelId).digest('hex');
+      this.channelMap.set(channelId, hash);
+    }
+    return this.channelMap.get(channelId);
+  }
+
   async collectInteraction(message, response, model) {
     if (!process.env.DATA_COLLECTION_ENABLED === 'true') return;
 
     const timestamp = new Date().toISOString();
     const anonymousUserId = this.getAnonymousId(message.author.id);
+    const anonymousChannelId = this.getAnonymousChannelId(message.channel.id);
+    const anonymousGuildId = message.guild ? this.getAnonymousChannelId(message.guild.id) : 'DM';
     
     const interactionData = {
       timestamp,
       anonymousUserId,
-      channelId: message.channel.id,
-      guildId: message.guild?.id || 'DM',
+      anonymousChannelId,
+      anonymousGuildId,
       messageLength: message.content.length,
       responseLength: response.length,
       model,

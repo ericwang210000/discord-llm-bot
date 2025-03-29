@@ -49,7 +49,7 @@ npm start
 The bot collects anonymized interaction data including:
 - Timestamp
 - Anonymous user ID
-- Channel and server IDs
+- Hashed channel and server IDs
 - Message and response lengths
 - Model used
 - Message metadata (attachments, embeds)
@@ -60,9 +60,5 @@ Data is stored in daily JSON files in the configured `DATA_STORAGE_PATH`.
 
 - Never commit your `.env` file
 - Keep your API keys secure
-- The bot only responds to mentions or DMs
-- User data is anonymized using UUIDs
-
-## Contributing
-
-Feel free to submit issues and enhancement requests! 
+- The bot only responds to mentions
+- User and channel idenntifiers are anonymized
