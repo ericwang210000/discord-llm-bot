@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits, Events } = require('discord.js');
 const OpenAI = require('openai');
 const DataCollector = require('./utils/dataCollector');
 
-// Initialize Discord client
+//init discord client with message perms
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -13,7 +13,7 @@ const client = new Client({
   ]
 });
 
-// Initialize OpenRouter client
+//init openai client w/ openrouter api
 const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
@@ -23,34 +23,42 @@ const openai = new OpenAI({
   }
 });
 
-// Initialize data collector
+//init data collector
 const dataCollector = new DataCollector(process.env.DATA_STORAGE_PATH);
 
-// Bot ready event
+//bot ready event
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user.tag}`);
+  console.log(`Bot ID: ${client.user.id}`);
   await dataCollector.initialize();
 });
 
-// Message event handler
+//handle messages on creation
 client.on(Events.MessageCreate, async message => {
-  // Ignore messages from bots
-  if (message.author.bot) return;
-
-  // Check if the message mentions the bot or is a DM
-  if (!message.mentions.users.has(client.user.id) && !message.channel.isDMBased()) return;
+  console.log('Received message:', message.content);
 
   try {
-    // Show typing indicator
+    //typing indicator
     await message.channel.sendTyping();
 
-    // Prepare the conversation
+    // parse message string remove bot mention
+    const userMessage = message.content.replace(`<@${client.user.id}>`, '').trim();
+    
+    // ignore empty messages
+    if (!userMessage) {
+      await message.reply('Please provide a message for me to respond to!');
+      return;
+    }
+
+    //conversation context
     const conversation = [
       { role: 'system', content: 'You are a helpful AI assistant in a Discord server.' },
-      { role: 'user', content: message.content.replace(`<@${client.user.id}>`, '').trim() }
+      { role: 'user', content: userMessage }
     ];
 
-    // Get response from OpenRouter
+    console.log('Sending request to OpenRouter with message:', userMessage);
+
+    //get response from OpenRouter
     const completion = await openai.chat.completions.create({
       model: 'qwen/qwq-32b:free',
       messages: conversation,
@@ -58,24 +66,87 @@ client.on(Events.MessageCreate, async message => {
       max_tokens: 1000
     });
 
-    const response = completion.choices[0].message.content;
+    //console.log('Received completion:', completion);
+    //console.log('Received completion:', JSON.stringify(completion, null, 2));
 
-    // Send response
-    await message.reply(response);
+    //verify completion is valid
+    if (!completion.choices || completion.choices.length === 0) {
+      throw new Error('No choices returned from OpenRouter');
+    }
 
-    // Collect interaction data
+    //try to get response from content first, then reasoning if content is empty
+    let response = completion.choices[0].message.content;
+    if (!response || response.trim() === '') {
+      //extract response from between quotes in reasoning field
+      const reasoning = completion.choices[0].message.reasoning;
+      
+      //find all quoted strings
+      const quotedStrings = [];
+      let startIndex = 0;
+      while (true) {
+        const quoteStart = reasoning.indexOf('"', startIndex);
+        if (quoteStart === -1) break;
+        
+        const quoteEnd = reasoning.indexOf('"', quoteStart + 1);
+        if (quoteEnd === -1) break;
+        
+        const quotedText = reasoning.substring(quoteStart + 1, quoteEnd);
+        quotedStrings.push(quotedText);
+        startIndex = quoteEnd + 1;
+      }
+
+      //get the second quoted string if it exists
+      if (quotedStrings.length >= 2) {
+        response = quotedStrings[1];
+      } else if (quotedStrings.length === 1) {
+        response = quotedStrings[0];
+      } else {
+        response = reasoning;
+      }
+    }
+
+    //validate response
+    if (!response || response.trim() === '') {
+      throw new Error('Received empty response from OpenRouter');
+    }
+
+    //split response into chunks if char > 1900
+    const maxLength = 1900;
+    if (response.length > maxLength) {
+      const chunks = [];
+      for (let i = 0; i < response.length; i += maxLength) {
+        chunks.push(response.substring(i, i + maxLength));
+      }
+      for (const chunk of chunks) {
+        await message.reply(chunk);
+      }
+    } else {
+      await message.reply(response);
+    }
+
+    //collect interaction data
     await dataCollector.collectInteraction(message, response, 'qwq-32b:free');
 
   } catch (error) {
     console.error('Error processing message:', error);
-    await message.reply('I apologize, but I encountered an error processing your message. Please try again later.');
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+    
+    const errorMessage = error.message === 'Received empty response from OpenRouter'
+      ? 'I received an empty response from the AI model. Please try again.'
+      : 'I encountered an error processing your message. Please try again later.';
+    await message.reply(errorMessage);
   }
 });
 
-// Error handling
+//error handling
 client.on(Events.Error, error => {
   console.error('Discord client error:', error);
 });
 
-// Start the bot
+//start the bot
 client.login(process.env.DISCORD_TOKEN); 

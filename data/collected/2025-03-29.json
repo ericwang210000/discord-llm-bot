@@ -1,0 +1,110 @@
+[
+  {
+    "timestamp": "2025-03-29T00:54:01.681Z",
+    "anonymousUserId": "cd5e1cfa-10e8-405f-9ad8-07fb221c9f16",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 29,
+    "responseLength": 34,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:16:08.670Z",
+    "anonymousUserId": "13fac56d-ad7a-4137-a1ae-c882dcc9bd78",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 37,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:16:27.648Z",
+    "anonymousUserId": "13fac56d-ad7a-4137-a1ae-c882dcc9bd78",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 46,
+    "responseLength": 1173,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:41:34.409Z",
+    "anonymousUserId": "860115ba-cf9a-4544-85ff-2a9773181915",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 394,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:45:56.257Z",
+    "anonymousUserId": "b97d4925-2999-4930-9ab3-d53ac07ca2ea",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 5,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:48:37.481Z",
+    "anonymousUserId": "e4e35f91-243f-4e23-ae36-5e64159735f2",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 5,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:50:55.496Z",
+    "anonymousUserId": "1b81a7a4-fd97-4716-a497-d6b0cb52617e",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 41,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:52:16.532Z",
+    "anonymousUserId": "fbe8bee9-acb1-4745-b79c-c76fcb227ea9",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 37,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T01:52:37.214Z",
+    "anonymousUserId": "864ad35a-f44b-40c0-8a29-96837a093a7d",
+    "channelId": "941864650113445961",
+    "guildId": "941864650113445958",
+    "messageLength": 28,
+    "responseLength": 67,
+    "model": "qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  }
+]

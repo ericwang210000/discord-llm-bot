@@ -4,6 +4,7 @@
 # Logs
 logs/
 *.log
+./data/collected 
 
 # Operating System files
 .DS_Store
