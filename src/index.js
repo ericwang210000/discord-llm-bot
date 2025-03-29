@@ -123,13 +123,13 @@ client.on(Events.MessageCreate, async message => {
       await message.channel.sendTyping();
 
       // parse message string remove bot mention
-      const userMessage = message.content.replace(`<@${client.user.id}>`, '').trim();
-      const userMessage2 = message.content.replace(`<@966778471206514688>`, '').trim();
+      let userMessage = message.content;
+      // Remove both bot mentions
+      userMessage = userMessage.replace(/<@\d+>/g, '').trim();
       
       // ignore empty messages
       if (!userMessage) {
-        await message.reply('Please provide a message for me to respond to!');
-        return;
+        userMessage = 'Hello!';
       }
 
       // determine model based on if msg contains image
@@ -306,7 +306,6 @@ client.on(Events.MessageCreate, async message => {
         : 'I encountered an error processing your message. Please try again later.';
       await message.reply(errorMessage);
     }
-    await message.reply('All bugs or complaints should be directed to <@966778471206514688>');
   }
 });
 

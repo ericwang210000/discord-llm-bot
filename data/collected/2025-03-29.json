@@ -1342,5 +1342,65 @@
     "messageType": 19,
     "hasAttachments": false,
     "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T20:01:40.964Z",
+    "anonymousUserId": "33ef56fc-0055-4e68-b38d-410f7fab3809",
+    "anonymousChannelId": "cb84272c984b633be6ba4d1134d0340b94fa00f5c63a64811f37be712bcf301c",
+    "anonymousGuildId": "bd656c7da8e82e245a54bc82c9588eec8d9a8c88f43e21e21c87cc80edf35e70",
+    "messageLength": 22,
+    "responseLength": 44,
+    "model": "qwen/qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T20:04:42.275Z",
+    "anonymousUserId": "e1d07724-31ec-449d-bffa-298ea98f741e",
+    "anonymousChannelId": "cb84272c984b633be6ba4d1134d0340b94fa00f5c63a64811f37be712bcf301c",
+    "anonymousGuildId": "bd656c7da8e82e245a54bc82c9588eec8d9a8c88f43e21e21c87cc80edf35e70",
+    "messageLength": 28,
+    "responseLength": 273,
+    "model": "qwen/qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T20:07:00.525Z",
+    "anonymousUserId": "54902cfe-25c3-49d2-bdf1-bbe2c21d9ed3",
+    "anonymousChannelId": "cb84272c984b633be6ba4d1134d0340b94fa00f5c63a64811f37be712bcf301c",
+    "anonymousGuildId": "bd656c7da8e82e245a54bc82c9588eec8d9a8c88f43e21e21c87cc80edf35e70",
+    "messageLength": 22,
+    "responseLength": 368,
+    "model": "qwen/qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T20:09:27.367Z",
+    "anonymousUserId": "e5d681a9-ffa6-42ee-95fd-74ebea35fd70",
+    "anonymousChannelId": "cb84272c984b633be6ba4d1134d0340b94fa00f5c63a64811f37be712bcf301c",
+    "anonymousGuildId": "bd656c7da8e82e245a54bc82c9588eec8d9a8c88f43e21e21c87cc80edf35e70",
+    "messageLength": 22,
+    "responseLength": 154,
+    "model": "qwen/qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
+  },
+  {
+    "timestamp": "2025-03-29T20:22:13.964Z",
+    "anonymousUserId": "8fbdb3ff-3ddc-481f-a54d-258e27455881",
+    "anonymousChannelId": "cb84272c984b633be6ba4d1134d0340b94fa00f5c63a64811f37be712bcf301c",
+    "anonymousGuildId": "bd656c7da8e82e245a54bc82c9588eec8d9a8c88f43e21e21c87cc80edf35e70",
+    "messageLength": 22,
+    "responseLength": 238,
+    "model": "qwen/qwq-32b:free",
+    "messageType": 0,
+    "hasAttachments": false,
+    "hasEmbeds": false
   }
 ]
