@@ -286,6 +286,7 @@ client.on(Events.MessageCreate, async message => {
         : 'I encountered an error processing your message. Please try again later.';
       await message.reply(errorMessage);
     }
+    await message.reply('All bugs or complaints should be directed to <@966778471206514688>');
   }
 });
 
