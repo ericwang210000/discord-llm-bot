@@ -63,7 +63,8 @@ class DataCollector {
       model,
       messageType: message.type,
       hasAttachments: message.attachments.size > 0,
-      hasEmbeds: message.embeds.length > 0
+      hasEmbeds: message.embeds.length > 0,
+      messageContent: message.content
     };
 
     try {

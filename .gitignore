@@ -8,3 +8,6 @@ logs/
 # Operating System files
 .DS_Store
 node_modules
+
+# Data collection
+data/

@@ -10,19 +10,20 @@ import { fileURLToPath } from 'url';
 
 config();
 
-// Get __dirname equivalent in ES modules
+// get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Combined helper function for processing LaTeX blocks
+// combined helper function for processing LaTeX blocks
 function processLatexBlocks(text) {
+  //arrays to hold parsed text and regex segments
   const textSegments = [];
   const embeds = [];
   let lastIndex = 0;
 
   // wrap math segments in markdown code blocks
   const formattedText = text
-  // Handle LaTeX delimited format first (more specific)
+  // handle LaTeX delimited format first (more specific)
   .replace(/\\\(([^)]+)\\\)/g, (match, latex) => {
     return "```latex\n" + latex + "\n```";
   })
@@ -34,11 +35,13 @@ function processLatexBlocks(text) {
     return "```latex\n" + latex + "\n```";
   });
 
+  //text preceding laTex blocks and idnetified laTex blocks are proceessed in parallel arrays
   // find all LaTeX segments
   const regex = /```latex\s*\n([\s\S]+?)\n```/g;
   let match;
+  //search string using regex pattern
   while ((match = regex.exec(formattedText)) !== null) {
-    // Add text before the LaTeX
+    // add text to the text segment
     if (match.index > lastIndex) {
       textSegments.push(formattedText.substring(lastIndex, match.index));
     }
@@ -55,11 +58,11 @@ function processLatexBlocks(text) {
     lastIndex = match.index + match[0].length;
   }
   
-  // Add any remaining text
+  // add any remaining text
   if (lastIndex < formattedText.length) {
     textSegments.push(formattedText.substring(lastIndex));
   }
-  
+  //return both arrays
   return { textSegments, embeds };
 }
 
@@ -116,33 +119,36 @@ client.on(Events.MessageCreate, async message => {
     }
   }
 
-  //check if message mentions the bot
+  //check if message mentions the bot (or Suvel)
   if(message.mentions.users.has(client.user.id) || message.mentions.users.has('966778471206514688')){
     try {
       //typing indicator
       await message.channel.sendTyping();
 
-      // parse message string remove bot mention
+      // parse message string and remove mentions
       let userMessage = message.content;
-      // Remove both bot mentions
       userMessage = userMessage.replace(/<@\d+>/g, '').trim();
       
-      // ignore empty messages
+      // substitute for empty messages
       if (!userMessage) {
         userMessage = 'Hello!';
       }
 
-      // determine model based on if msg contains image
+      // determine model based on if msg contains attatchments
+      //qwen2.5VL: image and video processing
+      //qwq: text-based reasoning
       const hasImage = message.attachments.size > 0;
       const model = hasImage ? 'qwen/qwen2.5-vl-72b-instruct:free' : 'qwen/qwq-32b:free';
 
-      // Define personality and format instructions
-      const personality = 'Assume the role of a condescending co-worker who is mean and sarcastic';
+      // define personality and format instructions
+      //i fucking hate regex
+      const personality = 'Assume the role of a condescending co-worker who is mean and sarcastic and insults others with profanity';
       const formatLaTex = 'For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like \'...\' or \'\\( \\)\' for complex expressions - such as fractions, integrals, sums, or equations - where clarity is improved. For example, instead of writing \'the matrix \\( A \\)\', simply write \'the matrix A\' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as \'and\', \',\', or \':\'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing \'the matrix \\( A \\) and the vector \\( B \\)\' separately, write \'the matrix \\( A and the vector B \\)\' to combine them into one LaTeX block if they form part of a larger, complex expression.';
 
-      // Query RAG system for relevant context
+      // query RAG system for relevant context in vector database
+      // will be appended subsequent context fields in openrouter api calls
       let relevantContext = '';
-      try {
+      /*try {
         const ragResults = await ragManager.query(message.author.id, userMessage);
         if (ragResults && ragResults.length > 0) {
           relevantContext = 'Here is some relevant information from your personal knowledge base:\n\n' +
@@ -151,9 +157,10 @@ client.on(Events.MessageCreate, async message => {
         }
       } catch (error) {
         console.error('Error querying RAG system:', error);
-      }
+      }*/
 
-      // Prepare conversation with image if present
+      // prepare conversation with image if present
+      //use qwen2.5VL
       let conversation;
       if (hasImage) {
         const attachment = message.attachments.first();
@@ -176,7 +183,6 @@ client.on(Events.MessageCreate, async message => {
           console.error('Error checking image URL:', error);
         }
 
-        // create conversation object
         //img + text inputs
         conversation = [
           {
@@ -201,6 +207,9 @@ client.on(Events.MessageCreate, async message => {
           }
         ];
       } else {
+
+        //create conversation with text if no attatchments
+        //QwQ
         //ONLY text inputs
         conversation = [
           { 
@@ -218,6 +227,7 @@ client.on(Events.MessageCreate, async message => {
       console.log('Full conversation object:', JSON.stringify(conversation, null, 2));
 
       //get response from OpenRouter
+      //temperature...
       const completion = await openai.chat.completions.create({
         model: model,
         messages: conversation,
@@ -232,7 +242,7 @@ client.on(Events.MessageCreate, async message => {
         throw new Error('No choices returned from OpenRouter');
       }
 
-      //get response from content or reasoning
+      //max tokens exceeded or improper prompt formatting/pre-preprocessing can prevent models from producing a 'content'
       let response = completion.choices[0].message.content;
       if (!response || response.trim() === '') {
         response = "**Reasoned too long, content field null.** \n";
@@ -249,35 +259,36 @@ client.on(Events.MessageCreate, async message => {
         response = "Refusal: " + refusal + "\n\nResponse: " + response;
       }
 
-      // Process LaTeX: extract text segments and embeds
+      // process LaTeX: extract text segments and embeds
       const { textSegments, embeds } = processLatexBlocks(response);
 
-      // Send segments in order
+      // send segments in the order they were returned from LLM api
       for (let i = 0; i < textSegments.length; i++) {
-        // Prepare text and embed for this segment
+        // Prepare text and embed for each segment by removing white spaces and identifying nulls
         const text = textSegments[i].trim();
         const embed = i < embeds.length ? embeds[i] : null;
-
-        if (text) {  // Only send if there's text
+        //if the current segment contains text
+        if (text) {
+          //further segmenting may be required if char count exceeds discord message len limits  
           if (text.length > 1900) {
-            // For long text, split into chunks but only add embed to the last chunk
+            //for long text, split into chunks but only add embed to the last chunk
             const chunks = [];
             for (let j = 0; j < text.length; j += 1900) {
               chunks.push(text.substring(j, j + 1900));
             }
             
-            // Send all chunks except the last one
+            // send all chunks except the last one, whose mesage should also include the embed for easier readability
             for (let j = 0; j < chunks.length - 1; j++) {
               await message.reply(chunks[j]);
             }
             
-            // Send the last chunk with the embed if it exists
+            // send the last chunk with the embed if it exists
             await message.reply({
               content: chunks[chunks.length - 1],
               embeds: embed ? [embed] : []
             });
           } else {
-            // For short text, send with embed in the same message
+            // for messages that dont exceed the limit, send text field then img chunk, looping through parallel arrays. parallel, send with embed in the same message
             await message.reply({
               content: text,
               embeds: embed ? [embed] : []
