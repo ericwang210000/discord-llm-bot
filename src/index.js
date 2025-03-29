@@ -215,7 +215,7 @@ client.on(Events.MessageCreate, async message => {
       //get response from content or reasoning
       let response = completion.choices[0].message.content;
       if (!response || response.trim() === '') {
-        response = "**Reasoned too long, content field null, outputting Reasoning:** \n" + completion.choices[0].message.reasoning;
+        response = "**Reasoned too long, content field null.** \n";
       }
 
       //validate response
