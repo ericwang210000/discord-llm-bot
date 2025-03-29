@@ -12,7 +12,16 @@ function processLatexBlocks(text) {
   let lastIndex = 0;
 
   // First, wrap math segments in markdown code blocks
-  const formattedText = text.replace(/\[([^\]]+)\]/g, (match, latex) => {
+  const formattedText = text
+  // Handle LaTeX delimited format first (more specific)
+  .replace(/\\\(([^)]+)\\\)/g, (match, latex) => {
+    return "```latex\n" + latex + "\n```";
+  })
+  .replace(/\\\[([^\]]+)\\\]/g, (match, latex) => {
+    return "```latex\n" + latex + "\n```";
+  })
+  // Handle generic square brackets last (broadest match)
+  .replace(/\[([^\]]+)\]/g, (match, latex) => {
     return "```latex\n" + latex + "\n```";
   });
 
@@ -29,7 +38,7 @@ function processLatexBlocks(text) {
     // Process the LaTeX
     const latex = match[1];
     const encodedLatex = encodeURIComponent(latex);
-    const imageUrl = `https://latex.codecogs.com/png.latex?%5Cdpi%7B300%7D%20%5Ccolor%7Bwhite%7D%20${encodedLatex}`;
+    const imageUrl = `https://latex.codecogs.com/png.latex?%5Cdpi%7B150%7D%20%5Ccolor%7Bwhite%7D%20${encodedLatex}`;
     embeds.push(new EmbedBuilder()
       .setTitle('Rendered LaTeX')
       .setImage(imageUrl)
@@ -118,9 +127,9 @@ client.on(Events.MessageCreate, async message => {
         const imageUrl = message.attachments.first().url;
         console.log('Image URL:', imageUrl);
         conversation = [
-          { 
-            role: 'system', 
-            content: 'You are a helpful AI assistant in a Discord server. For Math Problems: Please reason step by step and put your final answer within **{}**.' 
+          {
+            "role": "system",
+            "content": "For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like '…' or '\\( \\)' for complex expressions—such as fractions, integrals, sums, or equations—where clarity is improved. For example, instead of writing 'the matrix \\( A \\)', simply write 'the matrix A' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as 'and', ',', or ':'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing 'the matrix \\( A \\) and the vector \\( B \\)' separately, write 'the matrix \\( A and the vector B \\)' to combine them into one LaTeX block if they form part of a larger, complex expression."
           },
           { 
             role: 'user', 
@@ -158,7 +167,7 @@ client.on(Events.MessageCreate, async message => {
       const completion = await openai.chat.completions.create({
         model: model,
         messages: conversation,
-        temperature: 0.6,
+        temperature: 0.7,
         max_tokens: 10000
       });
 
@@ -192,21 +201,38 @@ client.on(Events.MessageCreate, async message => {
 
       // Send segments in order
       for (let i = 0; i < textSegments.length; i++) {
-        // Send text segment
+        // Prepare text and embed for this segment
         const text = textSegments[i].trim();
-        if (text) {  // Only send non-empty text segments
-          if (text.length > 1900) {
-            for (let j = 0; j < text.length; j += 1900) {
-              await message.reply(text.substring(j, j + 1900));
-            }
-          } else {
-            await message.reply(text);
-          }
-        }
+        const embed = i < embeds.length ? embeds[i] : null;
 
-        // Send corresponding embed if it exists
-        if (i < embeds.length) {
-          await message.reply({ embeds: [embeds[i]] });
+        if (text) {  // Only send if there's text
+          if (text.length > 1900) {
+            // For long text, split into chunks but only add embed to the last chunk
+            const chunks = [];
+            for (let j = 0; j < text.length; j += 1900) {
+              chunks.push(text.substring(j, j + 1900));
+            }
+            
+            // Send all chunks except the last one
+            for (let j = 0; j < chunks.length - 1; j++) {
+              await message.reply(chunks[j]);
+            }
+            
+            // Send the last chunk with the embed if it exists
+            await message.reply({
+              content: chunks[chunks.length - 1],
+              embeds: embed ? [embed] : []
+            });
+          } else {
+            // For short text, send with embed in the same message
+            await message.reply({
+              content: text,
+              embeds: embed ? [embed] : []
+            });
+          }
+        } else if (embed) {
+          // If there's no text but there is an embed, send just the embed
+          await message.reply({ embeds: [embed] });
         }
       }
 
