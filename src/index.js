@@ -68,8 +68,14 @@ client.on(Events.MessageCreate, async message => {
 
       //conversation context
       const conversation = [
-        { role: 'system', content: 'You are a helpful AI assistant in a Discord server.' },
-        { role: 'user', content: userMessage }
+        { 
+          role: 'system', 
+          content: 'You are a helpful AI assistant in a Discord server. For Math Problems: Please reason step by step and put your final answer within **{}**.' 
+        },
+        { 
+          role: 'user', 
+          content: userMessage 
+        }
       ];
 
       console.log('Sending request to OpenRouter with message:', userMessage);
@@ -79,10 +85,10 @@ client.on(Events.MessageCreate, async message => {
         model: 'qwen/qwq-32b:free',
         messages: conversation,
         temperature: 0.7,
-        max_tokens: 1000
+        max_tokens: 3000
       });
 
-      //console.log('Received completion:', JSON.stringify(completion, null, 2));
+      console.log('Received completion:', JSON.stringify(completion, null, 2));
 
       //verify completion is valid
       if (!completion.choices || completion.choices.length === 0) {
@@ -92,7 +98,7 @@ client.on(Events.MessageCreate, async message => {
       //get response from content or reasoning
       let response = completion.choices[0].message.content;
       if (!response || response.trim() === '') {
-        response = "Content field null, outputting Reasoning: " + completion.choices[0].message.reasoning;
+        response = "**Content field null, outputting Reasoning:** \n" + completion.choices[0].message.reasoning;
       }
 
       //validate response
