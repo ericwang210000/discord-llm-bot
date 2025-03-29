@@ -66,30 +66,63 @@ client.on(Events.MessageCreate, async message => {
         return;
       }
 
-      //conversation context
-      const conversation = [
-        { 
-          role: 'system', 
-          content: 'You are a helpful AI assistant in a Discord server. For Math Problems: Please reason step by step and put your final answer within **{}**.' 
-        },
-        { 
-          role: 'user', 
-          content: userMessage 
-        }
-      ];
+      // Determine model based on message content
+      const hasImage = message.attachments.size > 0;
+      const model = hasImage ? 'qwen/qwen2.5-vl-72b-instruct:free' : 'qwen/qwq-32b:free';
+
+      // Prepare conversation with image if present
+      let conversation;
+      if (hasImage) {
+        const imageUrl = message.attachments.first().url;
+        console.log('Image URL:', imageUrl);
+        conversation = [
+          { 
+            role: 'system', 
+            content: 'You are a helpful AI assistant in a Discord server. For Math Problems: Please reason step by step and put your final answer within **{}**.' 
+          },
+          { 
+            role: 'user', 
+            content: [
+              {
+                type: 'text',
+                text: userMessage
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ];
+        console.log('Full conversation object:', JSON.stringify(conversation, null, 2));
+      } else {
+        conversation = [
+          { 
+            role: 'system', 
+            content: 'You are a helpful AI assistant in a Discord server. For Math Problems: Please reason step by step and put your final answer within **{}**.' 
+          },
+          { 
+            role: 'user', 
+            content: userMessage 
+          }
+        ];
+      }
 
       console.log('Sending request to OpenRouter with message:', userMessage);
 
       //get response from OpenRouter
       const completion = await openai.chat.completions.create({
-        model: 'qwen/qwq-32b:free',
+        model: model,
         messages: conversation,
         temperature: 0.7,
-        max_tokens: 3000
+        max_tokens: 30000
       });
 
       console.log('Received completion:', JSON.stringify(completion, null, 2));
-
+      //await message.reply(JSON.stringify(completion, null, 2));
+      
       //verify completion is valid
       if (!completion.choices || completion.choices.length === 0) {
         throw new Error('No choices returned from OpenRouter');
@@ -127,7 +160,7 @@ client.on(Events.MessageCreate, async message => {
       }
 
       //collect interaction data
-      await dataCollector.collectInteraction(message, response, 'qwq-32b:free');
+      await dataCollector.collectInteraction(message, response, model);
 
     } catch (error) {
       console.error('Error processing message:', error);
