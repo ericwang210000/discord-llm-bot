@@ -8,8 +8,11 @@
     "dev": "nodemon src/index.js"
   },
   "dependencies": {
+    "@langchain/openai": "^0.5.1",
+    "chromadb": "^2.1.0",
     "discord.js": "^14.14.1",
     "dotenv": "^16.4.5",
+    "langchain": "^0.3.19",
     "node-fetch": "^3.3.2",
     "openai": "^4.28.0",
     "uuid": "^9.0.1",

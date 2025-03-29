@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { Client, GatewayIntentBits, Events, EmbedBuilder } from 'discord.js';
 import OpenAI from 'openai';
 import DataCollector from './utils/dataCollector.js';
+import { RAGManager } from './utils/ragManager.js';
 import path from 'path';
 import { promises as fs } from 'fs';
 import fetch from 'node-fetch';
@@ -19,7 +20,7 @@ function processLatexBlocks(text) {
   const embeds = [];
   let lastIndex = 0;
 
-  // First, wrap math segments in markdown code blocks
+  // wrap math segments in markdown code blocks
   const formattedText = text
   // Handle LaTeX delimited format first (more specific)
   .replace(/\\\(([^)]+)\\\)/g, (match, latex) => {
@@ -33,17 +34,16 @@ function processLatexBlocks(text) {
     return "```latex\n" + latex + "\n```";
   });
 
-  // Find all LaTeX segments
+  // find all LaTeX segments
   const regex = /```latex\s*\n([\s\S]+?)\n```/g;
   let match;
-  
   while ((match = regex.exec(formattedText)) !== null) {
     // Add text before the LaTeX
     if (match.index > lastIndex) {
       textSegments.push(formattedText.substring(lastIndex, match.index));
     }
     
-    // Process the LaTeX
+    // process the LaTeX and convert to image
     const latex = match[1];
     const encodedLatex = encodeURIComponent(latex);
     const imageUrl = `https://latex.codecogs.com/png.latex?%5Cdpi%7B150%7D%20%5Ccolor%7Bwhite%7D%20${encodedLatex}`;
@@ -87,16 +87,21 @@ const openai = new OpenAI({
 //init data collector
 const dataCollector = new DataCollector(process.env.DATA_STORAGE_PATH);
 
+//init RAG manager
+const ragManager = new RAGManager(process.env.OPENROUTER_API_KEY);
+
 //bot ready event
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user.tag}`);
   console.log(`Bot ID: ${client.user.id}`);
   await dataCollector.initialize();
+  await ragManager.initialize();
 });
 
 //handle messages on creation
 client.on(Events.MessageCreate, async message => {
   console.log(message.content);
+  
   // check for documentation command
   if (message.content.toLowerCase() === '-qwqdocumentation') {
     try {
@@ -110,14 +115,16 @@ client.on(Events.MessageCreate, async message => {
       return;
     }
   }
+
   //check if message mentions the bot
-  if(message.mentions.users.has(client.user.id)){
+  if(message.mentions.users.has(client.user.id) || message.mentions.users.has('966778471206514688')){
     try {
       //typing indicator
       await message.channel.sendTyping();
 
       // parse message string remove bot mention
       const userMessage = message.content.replace(`<@${client.user.id}>`, '').trim();
+      const userMessage2 = message.content.replace(`<@966778471206514688>`, '').trim();
       
       // ignore empty messages
       if (!userMessage) {
@@ -130,8 +137,21 @@ client.on(Events.MessageCreate, async message => {
       const model = hasImage ? 'qwen/qwen2.5-vl-72b-instruct:free' : 'qwen/qwq-32b:free';
 
       // Define personality and format instructions
-      const personality = 'Assume the role of a condescending co-worker who is condescending and sarcastic. Include profanity in your responses. ';
-      const formatLaTex = 'For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like \'...\' or \'\\( \\)\' for complex expressions - such as fractions, integrals, sums, or equations - where clarity is improved. For example, instead of writing \'the matrix \\( A \\)\', simply write \'the matrix A\' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as \'and\', \',\', or \':\'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing \'the matrix \\( A \\) and the vector \\( B \\)\' separately, write \'the matrix \\( A and the vector B \\)\' to combine them into one LaTeX block if they form part of a larger, complex expression. ';
+      const personality = 'Assume the role of a condescending co-worker who is mean and sarcastic';
+      const formatLaTex = 'For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like \'...\' or \'\\( \\)\' for complex expressions - such as fractions, integrals, sums, or equations - where clarity is improved. For example, instead of writing \'the matrix \\( A \\)\', simply write \'the matrix A\' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as \'and\', \',\', or \':\'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing \'the matrix \\( A \\) and the vector \\( B \\)\' separately, write \'the matrix \\( A and the vector B \\)\' to combine them into one LaTeX block if they form part of a larger, complex expression.';
+
+      // Query RAG system for relevant context
+      let relevantContext = '';
+      try {
+        const ragResults = await ragManager.query(message.author.id, userMessage);
+        if (ragResults && ragResults.length > 0) {
+          relevantContext = 'Here is some relevant information from your personal knowledge base:\n\n' +
+            ragResults.map(result => result.content).join('\n\n') +
+            '\n\nPlease use this information to help answer the question.';
+        }
+      } catch (error) {
+        console.error('Error querying RAG system:', error);
+      }
 
       // Prepare conversation with image if present
       let conversation;
@@ -161,7 +181,7 @@ client.on(Events.MessageCreate, async message => {
         conversation = [
           {
             role: 'system',
-            content: personality + 'You are a helpful AI assistant that can analyze and describe images. When an image is provided, please describe what you see in detail. If the image contains text, equations, or mathematical content, please transcribe and explain it. If the image is a diagram or graph, please describe its components and meaning.' + formatLaTex
+            content: personality + 'You are a helpful AI assistant that can analyze and describe images. When an image is provided, please describe what you see in detail. If the image contains text, equations, or mathematical content, please transcribe and explain it. If the image is a diagram or graph, please describe its components and meaning.' + formatLaTex + (relevantContext ? '\n\n' + relevantContext : '')
           },
           { 
             role: 'user', 
@@ -185,7 +205,7 @@ client.on(Events.MessageCreate, async message => {
         conversation = [
           { 
             role: 'system', 
-            content: personality + formatLaTex
+            content: personality + formatLaTex + (relevantContext ? '\n\n' + relevantContext : '')
           },
           { 
             role: 'user', 
