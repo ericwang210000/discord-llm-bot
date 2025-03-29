@@ -2,6 +2,8 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Events } = require('discord.js');
 const OpenAI = require('openai');
 const DataCollector = require('./utils/dataCollector');
+const path = require('path');
+const fs = require('fs/promises');
 
 //init discord client with message perms
 const client = new Client({
@@ -35,6 +37,20 @@ client.once(Events.ClientReady, async () => {
 
 //handle messages on creation
 client.on(Events.MessageCreate, async message => {
+  console.log(message.content);
+  // check for documentation command
+  if (message.content.toLowerCase() === '-qwqdocumentation') {
+    try {
+      const docPath = path.join(__dirname, 'qwq-documentation.txt');
+      const documentation = await fs.readFile(docPath, 'utf8');
+      // Send the documentation text first
+      await message.reply('```\n' + documentation + '\n```');
+      return;
+    } catch (error) {
+      console.error('Error reading documentation or sending image:', error);
+      return;
+    }
+  }
   //check if message mentions the bot
   if(message.mentions.users.has(client.user.id)){
     try {
@@ -66,7 +82,7 @@ client.on(Events.MessageCreate, async message => {
         max_tokens: 1000
       });
 
-      console.log('Received completion:', JSON.stringify(completion, null, 2));
+      //console.log('Received completion:', JSON.stringify(completion, null, 2));
 
       //verify completion is valid
       if (!completion.choices || completion.choices.length === 0) {
