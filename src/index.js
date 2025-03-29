@@ -1,9 +1,51 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Events, EmbedBuilder } = require('discord.js');
 const OpenAI = require('openai');
 const DataCollector = require('./utils/dataCollector');
 const path = require('path');
 const fs = require('fs/promises');
+
+// Combined helper function for processing LaTeX blocks
+function processLatexBlocks(text) {
+  const textSegments = [];
+  const embeds = [];
+  let lastIndex = 0;
+
+  // First, wrap math segments in markdown code blocks
+  const formattedText = text.replace(/\[([^\]]+)\]/g, (match, latex) => {
+    return "```latex\n" + latex + "\n```";
+  });
+
+  // Find all LaTeX segments
+  const regex = /```latex\s*\n([\s\S]+?)\n```/g;
+  let match;
+  
+  while ((match = regex.exec(formattedText)) !== null) {
+    // Add text before the LaTeX
+    if (match.index > lastIndex) {
+      textSegments.push(formattedText.substring(lastIndex, match.index));
+    }
+    
+    // Process the LaTeX
+    const latex = match[1];
+    const encodedLatex = encodeURIComponent(latex);
+    const imageUrl = `https://latex.codecogs.com/png.latex?%5Cdpi%7B300%7D%20%5Ccolor%7Bwhite%7D%20${encodedLatex}`;
+    embeds.push(new EmbedBuilder()
+      .setTitle('Rendered LaTeX')
+      .setImage(imageUrl)
+      .setColor(0xFFFFFF));
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < formattedText.length) {
+    textSegments.push(formattedText.substring(lastIndex));
+  }
+  
+  return { textSegments, embeds };
+}
+
 
 //init discord client with message perms
 const client = new Client({
@@ -116,8 +158,8 @@ client.on(Events.MessageCreate, async message => {
       const completion = await openai.chat.completions.create({
         model: model,
         messages: conversation,
-        temperature: 0.7,
-        max_tokens: 30000
+        temperature: 0.6,
+        max_tokens: 10000
       });
 
       console.log('Received completion:', JSON.stringify(completion, null, 2));
@@ -131,7 +173,7 @@ client.on(Events.MessageCreate, async message => {
       //get response from content or reasoning
       let response = completion.choices[0].message.content;
       if (!response || response.trim() === '') {
-        response = "**Content field null, outputting Reasoning:** \n" + completion.choices[0].message.reasoning;
+        response = "**Reasoned too long, content field null, outputting Reasoning:** \n" + completion.choices[0].message.reasoning;
       }
 
       //validate response
@@ -145,18 +187,27 @@ client.on(Events.MessageCreate, async message => {
         response = "Refusal: " + refusal + "\n\nResponse: " + response;
       }
 
-      //split response into chunks if char > 1900
-      const maxLength = 1900;
-      if (response.length > maxLength) {
-        const chunks = [];
-        for (let i = 0; i < response.length; i += maxLength) {
-          chunks.push(response.substring(i, i + maxLength));
+      // Process LaTeX: extract text segments and embeds
+      const { textSegments, embeds } = processLatexBlocks(response);
+
+      // Send segments in order
+      for (let i = 0; i < textSegments.length; i++) {
+        // Send text segment
+        const text = textSegments[i].trim();
+        if (text) {  // Only send non-empty text segments
+          if (text.length > 1900) {
+            for (let j = 0; j < text.length; j += 1900) {
+              await message.reply(text.substring(j, j + 1900));
+            }
+          } else {
+            await message.reply(text);
+          }
         }
-        for (const chunk of chunks) {
-          await message.reply(chunk);
+
+        // Send corresponding embed if it exists
+        if (i < embeds.length) {
+          await message.reply({ embeds: [embeds[i]] });
         }
-      } else {
-        await message.reply(response);
       }
 
       //collect interaction data
