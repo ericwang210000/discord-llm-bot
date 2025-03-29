@@ -1,8 +1,8 @@
-const fs = require('fs').promises;
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const winston = require('winston');
-const crypto = require('crypto');
+import { promises as fs } from 'fs';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import winston from 'winston';
+import crypto from 'crypto';
 
 // Configure logger
 const logger = winston.createLogger({
@@ -86,4 +86,4 @@ class DataCollector {
   }
 }
 
-module.exports = DataCollector; 
+export default DataCollector; 

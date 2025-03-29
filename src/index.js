@@ -1,9 +1,17 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits, Events, EmbedBuilder } = require('discord.js');
-const OpenAI = require('openai');
-const DataCollector = require('./utils/dataCollector');
-const path = require('path');
-const fs = require('fs/promises');
+import { config } from 'dotenv';
+import { Client, GatewayIntentBits, Events, EmbedBuilder } from 'discord.js';
+import OpenAI from 'openai';
+import DataCollector from './utils/dataCollector.js';
+import path from 'path';
+import { promises as fs } from 'fs';
+import fetch from 'node-fetch';
+import { fileURLToPath } from 'url';
+
+config();
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Combined helper function for processing LaTeX blocks
 function processLatexBlocks(text) {
@@ -117,19 +125,43 @@ client.on(Events.MessageCreate, async message => {
         return;
       }
 
-      // Determine model based on message content
+      // determine model based on if msg contains image
       const hasImage = message.attachments.size > 0;
       const model = hasImage ? 'qwen/qwen2.5-vl-72b-instruct:free' : 'qwen/qwq-32b:free';
+
+      // Define personality and format instructions
+      const personality = 'Assume the role of a condescending co-worker who is condescending and sarcastic. Include profanity in your responses. ';
+      const formatLaTex = 'For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like \'...\' or \'\\( \\)\' for complex expressions - such as fractions, integrals, sums, or equations - where clarity is improved. For example, instead of writing \'the matrix \\( A \\)\', simply write \'the matrix A\' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as \'and\', \',\', or \':\'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing \'the matrix \\( A \\) and the vector \\( B \\)\' separately, write \'the matrix \\( A and the vector B \\)\' to combine them into one LaTeX block if they form part of a larger, complex expression. ';
 
       // Prepare conversation with image if present
       let conversation;
       if (hasImage) {
-        const imageUrl = message.attachments.first().url;
-        console.log('Image URL:', imageUrl);
+        const attachment = message.attachments.first();
+        const imageUrl = attachment.url;
+        console.log('Attachment details:', {
+          url: imageUrl,
+          contentType: attachment.contentType,
+          size: attachment.size,
+          name: attachment.name
+        });
+        
+        // try catch block to validate image url
+        try {
+          const response = await fetch(imageUrl);
+          console.log('Image URL accessibility check:', {
+            status: response.status,
+            ok: response.ok
+          });
+        } catch (error) {
+          console.error('Error checking image URL:', error);
+        }
+
+        // create conversation object
+        //img + text inputs
         conversation = [
           {
-            "role": "system",
-            "content": "For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like '…' or '\\( \\)' for complex expressions—such as fractions, integrals, sums, or equations—where clarity is improved. For example, instead of writing 'the matrix \\( A \\)', simply write 'the matrix A' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as 'and', ',', or ':'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing 'the matrix \\( A \\) and the vector \\( B \\)' separately, write 'the matrix \\( A and the vector B \\)' to combine them into one LaTeX block if they form part of a larger, complex expression."
+            role: 'system',
+            content: personality + 'You are a helpful AI assistant that can analyze and describe images. When an image is provided, please describe what you see in detail. If the image contains text, equations, or mathematical content, please transcribe and explain it. If the image is a diagram or graph, please describe its components and meaning.' + formatLaTex
           },
           { 
             role: 'user', 
@@ -141,18 +173,19 @@ client.on(Events.MessageCreate, async message => {
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageUrl
+                  url: imageUrl,
+                  detail: "high"
                 }
               }
             ]
           }
         ];
-        console.log('Full conversation object:', JSON.stringify(conversation, null, 2));
       } else {
+        //ONLY text inputs
         conversation = [
           { 
             role: 'system', 
-            content: 'You are a helpful AI assistant in a Discord server. For Math Problems: Please reason step by step and put your final answer within **{}**.' 
+            content: personality + formatLaTex
           },
           { 
             role: 'user', 
@@ -162,6 +195,7 @@ client.on(Events.MessageCreate, async message => {
       }
 
       console.log('Sending request to OpenRouter with message:', userMessage);
+      console.log('Full conversation object:', JSON.stringify(conversation, null, 2));
 
       //get response from OpenRouter
       const completion = await openai.chat.completions.create({
@@ -172,7 +206,6 @@ client.on(Events.MessageCreate, async message => {
       });
 
       console.log('Received completion:', JSON.stringify(completion, null, 2));
-      //await message.reply(JSON.stringify(completion, null, 2));
       
       //verify completion is valid
       if (!completion.choices || completion.choices.length === 0) {
