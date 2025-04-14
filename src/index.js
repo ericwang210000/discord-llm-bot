@@ -142,7 +142,7 @@ client.on(Events.MessageCreate, async message => {
 
       // define personality and format instructions
       //i fucking hate regex
-      const personality = 'Assume the role of a condescending co-worker who is mean and sarcastic and insults others with profanity';
+      const personality = process.env.CONTEXT;
       const formatLaTex = 'For math problems, please reason step by step. When outputting mathematical content, use plain text for simple variables or symbols, and reserve LaTeX formatting (using delimiters like \'...\' or \'\\( \\)\' for complex expressions - such as fractions, integrals, sums, or equations - where clarity is improved. For example, instead of writing \'the matrix \\( A \\)\', simply write \'the matrix A\' unless A is part of a larger, nontrivial expression. Minimize the number of separate LaTeX fragments: if multiple expressions are connected by joiners (such as \'and\', \',\', or \':\'), group them into a single LaTeX fragment rather than multiple ones. For instance, instead of writing \'the matrix \\( A \\) and the vector \\( B \\)\' separately, write \'the matrix \\( A and the vector B \\)\' to combine them into one LaTeX block if they form part of a larger, complex expression.';
 
       // query RAG system for relevant context in vector database
