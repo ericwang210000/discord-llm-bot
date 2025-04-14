@@ -104,7 +104,10 @@ client.once(Events.ClientReady, async () => {
 //handle messages on creation
 client.on(Events.MessageCreate, async message => {
   console.log(message.content);
-  
+  //check if message is from a bot
+  if(message.author.bot){
+    return;
+  }
   // check for documentation command
   if (message.content.toLowerCase() === '-qwqdocumentation') {
     try {
@@ -120,7 +123,7 @@ client.on(Events.MessageCreate, async message => {
   }
 
   //check if message mentions the bot (or Suvel)
-  if(message.mentions.users.has(client.user.id) || message.mentions.users.has('966778471206514688')){
+  if(message.mentions.users.has(client.user.id) || message.mentions.users.has('966778471206514688') || message.mentions.users.has('873404619894718495')){
     try {
       //typing indicator
       await message.channel.sendTyping();
